@@ -1,4 +1,5 @@
 import streamlit as st
+import pubchempy as pcp
 from rdkit import Chem
 from rdkit.Chem import Draw
 from rdkit.Chem.Draw import rdMolDraw2D
@@ -8,272 +9,301 @@ from stmol import showmol
 
 # --- 1. SET UP THE PAGE ---
 st.set_page_config(
-    page_title="Virtual Chemistry Lab", 
-    page_icon="☕",
+    page_title="Stereochemical Analyzer", 
+    page_icon="🖋️",
     layout="centered"
 )
 
-# --- 2. CUSTOM CSS STYLING (COZY CHEMISTRY VIBES) ---
+# --- 2. CUSTOM CSS STYLING (DARK ACADEMIA) ---
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&family=Playfair+Display:ital,wght@0,600;1,600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap');
     
-    /* Cozy Coffee/Chemistry Background */
+    /* Dark Academia Background */
     .stApp {
-        background: linear-gradient(135deg, #fdfbf7 0%, #f4eade 100%);
-        color: #3e3328;
-        font-family: 'Nunito', sans-serif;
+        background-color: #12100e;
+        background-image: radial-gradient(circle at center, #1b1714 0%, #0a0807 100%);
+        color: #d4c8b2;
+        font-family: 'EB Garamond', serif;
+        font-size: 18px;
     }
     
     h1, h2, h3 {
-        font-family: 'Playfair Display', serif !important;
-        color: #8b5e34 !important;
-    }
-
-    /* Floating Animation for Student Card */
-    @keyframes float {
-        0% { transform: translateY(0px); }
-        50% { transform: translateY(-8px); box-shadow: 0 15px 30px -5px rgba(139, 94, 52, 0.3); }
-        100% { transform: translateY(0px); }
+        font-family: 'Cinzel', serif !important;
+        color: #cfab7a !important;
+        letter-spacing: 1.5px;
     }
     
+    h1 {
+        border-bottom: 1px solid #cfab7a33;
+        padding-bottom: 10px;
+        margin-bottom: 25px;
+        text-align: center;
+    }
+
+    /* Elegant Student Card */
     .student-card {
-        background: rgba(255, 255, 255, 0.85);
-        backdrop-filter: blur(10px);
-        padding: 24px;
-        border-radius: 20px;
-        border: 2px solid #ebdeb3;
-        box-shadow: 0 10px 25px -5px rgba(139, 94, 52, 0.15);
-        margin-bottom: 2rem;
-        color: #5c4731;
-        animation: float 6s ease-in-out infinite;
+        background: rgba(20, 17, 15, 0.95);
+        border: 1px solid #cfab7a66;
+        padding: 25px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+        color: #d4c8b2;
+        margin-bottom: 30px;
     }
     .student-card h2 {
         margin-top: 0;
-        color: #8b5e34 !important;
-        letter-spacing: 0.5px;
         text-align: center;
+        border-bottom: none;
+        font-size: 1.5em;
     }
     .student-details {
-        font-size: 1.15em;
-        line-height: 1.6;
+        font-size: 1.1em;
+        line-height: 1.8;
         text-align: center;
     }
     .highlight-span {
-        color: #d18134;
-        font-weight: 800;
-        background: rgba(209, 129, 52, 0.15);
-        padding: 2px 10px;
-        border-radius: 12px;
+        color: #e5c99f;
+        font-style: italic;
     }
     
-    /* Shiny Animated Button */
-    @keyframes pulse-mocha {
-      0% { box-shadow: 0 0 0 0 rgba(139, 94, 52, 0.6); }
-      70% { box-shadow: 0 0 0 15px rgba(139, 94, 52, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(139, 94, 52, 0); }
-    }
-    
-    /* Enhance buttons to look cute & cozy */
+    /* Elegant Button */
     .stButton>button {
-        background: linear-gradient(135deg, #a67c52 0%, #8b5e34 100%);
-        color: #ffffff;
-        font-weight: bold;
+        background: rgba(20, 17, 15, 0.8);
+        color: #cfab7a;
+        font-family: 'Cinzel', serif;
         font-size: 1.1em;
-        border-radius: 16px;
-        border: none;
-        padding: 10px;
-        transition: all 0.3s ease;
-        animation: pulse-mocha 2.5s infinite;
+        border: 1px solid #cfab7a;
+        border-radius: 0px;
+        padding: 10px 20px;
+        transition: all 0.4s ease;
+        text-transform: uppercase;
+        letter-spacing: 2px;
     }
     .stButton>button:hover {
-        transform: scale(1.03) translateY(-2px);
-        background: linear-gradient(135deg, #b88d61 0%, #a67c52 100%);
-        color: white;
-        animation: none;
-        box-shadow: 0 8px 20px rgba(139, 94, 52, 0.4);
+        background: #cfab7a;
+        color: #12100e;
+        border-color: #cfab7a;
+        box-shadow: 0 0 15px rgba(207, 171, 122, 0.4);
     }
     
-    /* Soft inputs */
+    /* Input Fields */
     .stTextInput>div>div>input {
-        border-radius: 12px;
-        border: 2px solid #ebdeb3;
-        background-color: white;
+        border-radius: 0px;
+        border: 1px solid #5a4b3c;
+        background-color: #1a1714;
         padding: 12px;
-        color: #3e3328;
-        font-family: monospace;
-        letter-spacing: 0.5px;
+        color: #e5c99f;
+        font-family: 'EB Garamond', serif;
     }
     .stTextInput>div>div>input:focus {
-        border-color: #d18134;
-        box-shadow: 0 0 12px rgba(209, 129, 52, 0.2);
+        border-color: #cfab7a;
+        box-shadow: 0 0 8px rgba(207, 171, 122, 0.3);
     }
     
-    /* Custom tabs for cozy ui */
+    /* Table styles */
+    tbody tr:nth-child(odd) {
+        background-color: #181512;
+    }
+    tbody tr:nth-child(even) {
+        background-color: #1e1a17;
+    }
+    tbody tr:hover {
+        background-color: #2a241f;
+    }
+    th {
+        background-color: #1b1714 !important;
+        color: #cfab7a !important;
+        font-family: 'Cinzel', serif;
+        text-transform: uppercase;
+        border-bottom: 2px solid #5a4b3c !important;
+    }
+    td {
+        color: #d4c8b2;
+        font-family: 'EB Garamond', serif;
+    }
+    
+    /* Minimalist Tabs */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 12px;
-        background-color: transparent;
+        gap: 0px;
+        border-bottom: 1px solid #5a4b3c;
     }
     .stTabs [data-baseweb="tab"] {
-        border-radius: 12px 12px 0 0;
-        padding: 12px 24px;
-        background-color: rgba(235, 222, 179, 0.3);
+        border-radius: 0px;
+        padding: 10px 20px;
+        background-color: transparent;
         border: none;
+        color: #8c7b64;
+        font-family: 'Cinzel', serif;
     }
     .stTabs [aria-selected="true"] {
-        background-color: #8b5e34 !important;
-        color: white !important;
+        background-color: transparent !important;
+        color: #cfab7a !important;
+        border-bottom: 2px solid #cfab7a;
     }
     
-    /* Center images */
-    .stImage, svg {
-        display: block;
-        margin-left: auto;
-        margin-right: auto;
-        transition: transform 0.5s ease;
+    /* SVG border */
+    .svg-container {
+        border: 1px solid #cfab7a33;
+        padding: 15px;
+        background-color: #faf7f0; 
+        border-radius: 2px;
     }
-    svg:hover {
-        transform: scale(1.02);
-    }
+    
+    /* Disable balloons or sparkles */
+    
 </style>
 """, unsafe_allow_html=True)
 
 # --- 3. STUDENT DETAILS BOX ---
 st.markdown("""
 <div class="student-card">
-    <h2>🧪 Student Project Outline 🤎</h2>
+    <h2>Academic Project Portfolio</h2>
     <div class="student-details">
-        <strong>Name:</strong> <span class="highlight-span">Jamila Mustaali Zaveri</span><br>
-        <strong>Registration Number:</strong> <span class="highlight-span">RA2511026050033</span><br>
-        <strong>Class/Sec:</strong> <span class="highlight-span">AIML-A</span> • <strong>Year/Sem:</strong> <span class="highlight-span">I / II</span>
+        <strong>Scholar:</strong> <span class="highlight-span">Jamila Mustaali Zaveri</span><br>
+        <strong>Registration Protocol:</strong> <span class="highlight-span">RA2511026050033</span><br>
+        <strong>Division:</strong> <span class="highlight-span">AIML-A</span> &nbsp;|&nbsp; <strong>Term:</strong> <span class="highlight-span">I / II</span>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
 # --- 4. APP HEADER & INPUT ---
-st.title("☕ Virtual Chemistry Lab")
-st.markdown("##### *A cozy, interactive aesthetic analyzer for molecules & stereocenters.*")
-st.markdown("---")
+st.title("Stereochemical Analyzer")
+st.markdown("<p style='text-align: center; color: #8c7b64; font-size: 1.1em; margin-bottom: 30px;'>An analytical instrument to deduce structural chirality and R/S configurations via the PubChem archive.</p>", unsafe_allow_html=True)
 
-smiles_input = st.text_input(
-    "✨ Paste your SMILES string here:", 
-    value="FC(F)(F)C1=CC(N2C(=O)C[C@H](N)CC2=O)=NN1CC1=C(F)C=C(F)C=C1F",
-)
+# Selection for input type
+search_type = st.radio("Query Paradigm Selection", ["Query by Chemical Nomenclature (PubChem)", "Query by SMILES String"])
 
-analyze_btn = st.button("🪄 Sparkle & Analyze!", use_container_width=True)
+if search_type == "Query by Chemical Nomenclature (PubChem)":
+    query_input = st.text_input("Enter Standard IUPAC or Common Name:", value="Aspirin")
+else:
+    query_input = st.text_input("Enter SMILES Notation:", value="FC(F)(F)C1=CC(N2C(=O)C[C@H](N)CC2=O)=NN1CC1=C(F)C=C(F)C=C1F")
+
+analyze_btn = st.button("Commence Analysis", use_container_width=True)
 
 # --- 5. MAIN LOGIC ---
 if analyze_btn:
-    if not smiles_input.strip():
-        st.error("Please enter a valid SMILES string.")
+    if not query_input.strip():
+        st.error("Please provide a valid query.")
     else:
-        with st.spinner("Analyzing processing chemical properties..."):
+        with st.spinner("Consulting archives and synthesizing structural models..."):
             
-            mol = Chem.MolFromSmiles(smiles_input.strip())
+            smiles_string = query_input.strip()
+            compound_name = "Custom SMILES"
             
-            if mol is None:
-                st.error("❌ Invalid SMILES input. Please check your spelling and try again.")
-            else:
-                # Add hydrogens for accurate stereochemical assignment
-                mol_with_h = Chem.AddHs(mol)
-                Chem.AssignStereochemistry(mol_with_h, force=True, cleanIt=True)
-                
-                # Setup metrics
-                chiral_centers = Chem.FindMolChiralCenters(mol_with_h, includeUnassigned=True)
-                num_chiral = len(chiral_centers)
-                R_count = S_count = unknown = 0
-                chiral_indices_h = []
-                results_data = []
+            # PubChem Search API integration
+            if search_type == "Query by Chemical Nomenclature (PubChem)":
+                try:
+                    compounds = pcp.get_compounds(query_input.strip(), 'name')
+                    if compounds:
+                        # Grab the first match smiles
+                        smiles_string = compounds[0].isomeric_smiles
+                        compound_name = compounds[0].iupac_name or query_input.strip()
+                        st.info(f"Successfully retrieved from PubChem Archive: **{compound_name.title()}** | Canonical SMILES: `{smiles_string}`")
+                    else:
+                        st.error("Compound not found within the PubChem archive. Please verify the nomenclature.")
+                        smiles_string = None
+                except Exception as e:
+                    st.error("Failure accessing the PubChem Archive. Please ensure the term is a valid chemical or internet connection is active.")
+                    smiles_string = None
 
-                for idx, config in chiral_centers:
-                    atom = mol_with_h.GetAtomWithIdx(idx)
-                    chiral_indices_h.append(idx)
-                    symbol = atom.GetSymbol()
+            if smiles_string:
+                mol = Chem.MolFromSmiles(smiles_string)
+                
+                if mol is None:
+                    st.error("Synthesis Failed: The generated or provided SMILES string is invalid.")
+                else:
+                    mol_with_h = Chem.AddHs(mol)
+                    Chem.AssignStereochemistry(mol_with_h, force=True, cleanIt=True)
                     
-                    if config == 'R': R_count += 1
-                    elif config == 'S': S_count += 1
-                    else: unknown += 1
+                    # Analyze chirality
+                    chiral_centers = Chem.FindMolChiralCenters(mol_with_h, includeUnassigned=True)
+                    num_chiral = len(chiral_centers)
+                    R_count = S_count = unknown = 0
+                    chiral_indices_h = []
+                    results_data = []
+
+                    for idx, config in chiral_centers:
+                        atom = mol_with_h.GetAtomWithIdx(idx)
+                        chiral_indices_h.append(idx)
+                        symbol = atom.GetSymbol()
                         
-                    results_data.append({
-                        "Atom Index": idx, 
-                        "Element": symbol, 
-                        "Configuration": config
-                    })
-                
-                # Analyze Achiral (sp3) Carbons
-                achiral_sp3 = 0
-                for atom in mol_with_h.GetAtoms():
-                    if atom.GetAtomicNum() == 6 and atom.GetHybridization() == Chem.HybridizationType.SP3:
-                        if atom.GetIdx() not in chiral_indices_h:
-                            achiral_sp3 += 1
-
-                st.success("✅ Analysis Complete!")
-                st.balloons()
-
-                # --- 6. DISPLAY TABS ---
-                tab1, tab2, tab3 = st.tabs(["📊 Results", "🎨 2D Highlighted", "🔮 3D View"])
-                
-                # Tab 1: Stats
-                with tab1:
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.subheader("Summary Statistics")
-                        st.markdown(f"- **Total Chiral Centers:** `{num_chiral}`")
-                        st.markdown(f"- **R Configuration:** `{R_count}`")
-                        st.markdown(f"- **S Configuration:** `{S_count}`")
-                        st.markdown(f"- **Unassigned:** `{unknown}`")
-                        st.markdown(f"- **Achiral (sp3) Carbons:** `{achiral_sp3}`")
-
-                    with col2:
-                        st.subheader("Detailed Breakdown")
-                        if results_data:
-                            st.table(results_data)
-                        else:
-                            st.info("No chiral centers found in this molecule.")
+                        if config == 'R': R_count += 1
+                        elif config == 'S': S_count += 1
+                        else: unknown += 1
                             
-                # Tab 2: Beautiful 2D Diagram
-                with tab2:
-                    st.subheader("2D Representation")
-                    Chem.AssignStereochemistry(mol, force=True, cleanIt=True)
-                    chiral_centers_orig = Chem.FindMolChiralCenters(mol, includeUnassigned=True)
-                    highlight_atoms = [idx for idx, _ in chiral_centers_orig]
+                        results_data.append({
+                            "Atom Index": idx, 
+                            "Atomic Species": symbol, 
+                            "Configuration": config
+                        })
                     
-                    try:
-                        drawer = rdMolDraw2D.MolDraw2DSVG(600, 400)
-                        opts = drawer.drawOptions()
-                        opts.clearBackground = False
-                        opts.highlightDefaultRenderer = rdMolDraw2D.DrawColour(0.2, 0.8, 0.2) # Green highlights
-                        
-                        drawer.DrawMolecule(mol, highlightAtoms=highlight_atoms)
-                        drawer.FinishDrawing()
-                        svg = drawer.GetDrawingText()
-                        
-                        st.markdown(f'<div style="text-align: center; border-radius: 10px; background: white; padding: 10px;">{svg}</div>', unsafe_allow_html=True)
-                    except Exception as e:
-                        img = Draw.MolToImage(mol, highlightAtoms=highlight_atoms, size=(600, 400))
-                        st.image(img, use_container_width=True)
+                    achiral_sp3 = 0
+                    for atom in mol_with_h.GetAtoms():
+                        if atom.GetAtomicNum() == 6 and atom.GetHybridization() == Chem.HybridizationType.SP3:
+                            if atom.GetIdx() not in chiral_indices_h:
+                                achiral_sp3 += 1
 
-                # Tab 3: Interactive 3D Model
-                with tab3:
-                    st.subheader("Interactive 3D Model")
-                    try:
-                        params = AllChem.ETKDGv3()
-                        params.randomSeed = 42
-                        res = AllChem.EmbedMolecule(mol_with_h, params)
-                        if res == -1:
-                            st.warning("Could not calculate 3D coordinates for this specific molecule.")
-                        else:
-                            AllChem.MMFFOptimizeMolecule(mol_with_h)
-                            mb = Chem.MolToMolBlock(mol_with_h)
+                    # --- 6. DISPLAY TABS ---
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    tab1, tab2, tab3 = st.tabs(["Analytical Parameters", "2D Highlighting", "3D Projection"])
+                    
+                    with tab1:
+                        c1, c2 = st.columns(2)
+                        with c1:
+                            st.markdown("### Structural Overview")
+                            st.markdown(f"**Total Chiral Centers:** {num_chiral}")
+                            st.markdown(f"**Rectus (R) Domains:** {R_count}")
+                            st.markdown(f"**Sinister (S) Domains:** {S_count}")
+                            st.markdown(f"**Indeterminate Arrays:** {unknown}")
+                            st.markdown(f"**Achiral (sp³ hybridized) Carbons:** {achiral_sp3}")
+
+                        with c2:
+                            st.markdown("### Stereocenter Details")
+                            if results_data:
+                                st.table(results_data)
+                            else:
+                                st.write("Absence of structural chirality recognized within this framework.")
+                                
+                    with tab2:
+                        Chem.AssignStereochemistry(mol, force=True, cleanIt=True)
+                        chiral_centers_orig = Chem.FindMolChiralCenters(mol, includeUnassigned=True)
+                        highlight_atoms = [idx for idx, _ in chiral_centers_orig]
+                        
+                        try:
+                            drawer = rdMolDraw2D.MolDraw2DSVG(600, 450)
+                            opts = drawer.drawOptions()
+                            # Pure white background for stark contrast so molecules remain clear
+                            opts.clearBackground = True
+                            # Gold highlights for dark academia feel
+                            opts.highlightDefaultRenderer = rdMolDraw2D.DrawColour(0.81, 0.67, 0.48)
                             
-                            view = py3Dmol.view(width=700, height=500)
-                            view.addModel(mb, 'sdf')
-                            view.setStyle({'stick': {}})
-                            view.setBackgroundColor('#0e1117')
-                            view.zoomTo()
+                            drawer.DrawMolecule(mol, highlightAtoms=highlight_atoms)
+                            drawer.FinishDrawing()
+                            svg = drawer.GetDrawingText()
                             
-                            showmol(view, height=500, width=700)
-                            st.caption("Pro-tip: Scroll to zoom, click and drag to rotate.")
-                            
-                    except Exception as e:
-                        st.error(f"Error generating 3D view: {e}")
+                            st.markdown(f'<div class="svg-container" style="text-align: center;">{svg}</div>', unsafe_allow_html=True)
+                        except Exception as e:
+                            img = Draw.MolToImage(mol, highlightAtoms=highlight_atoms, size=(600, 450))
+                            st.image(img, use_container_width=True)
+
+                    with tab3:
+                        try:
+                            params = AllChem.ETKDGv3()
+                            params.randomSeed = 42
+                            res = AllChem.EmbedMolecule(mol_with_h, params)
+                            if res == -1:
+                                st.warning("3D coordinate synthesis unresolvable for this spatial complex.")
+                            else:
+                                AllChem.MMFFOptimizeMolecule(mol_with_h)
+                                mb = Chem.MolToMolBlock(mol_with_h)
+                                
+                                view = py3Dmol.view(width=700, height=500)
+                                view.addModel(mb, 'sdf')
+                                view.setStyle({'stick': {}})
+                                view.setBackgroundColor('#12100e')
+                                view.zoomTo()
+                                
+                                showmol(view, height=500, width=700)
+                                st.caption("Instruct: Scroll to magnify; Select and drag to alter structural rotation.")
+                        except Exception as e:
+                            st.error(f"Visual projection failure: {e}")
