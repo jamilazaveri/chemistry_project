@@ -275,12 +275,24 @@ if analyze_btn:
                     if compounds:
                         smiles_string = compounds[0].isomeric_smiles
                         compound_name = compounds[0].iupac_name or query_input.strip()
+                        
+                        # Fetch Layman Description
+                        try:
+                            import requests
+                            cid = compounds[0].cid
+                            url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/data/compound/{cid}/JSON?heading=Description"
+                            resp = requests.get(url).json()
+                            description = resp['Record']['Section'][0]['Information'][0]['Value']['StringWithMarkup'][0]['String']
+                        except:
+                            description = "Informality on this specific compound is restricted within the primary archives, though its structural properties remain analytically valid."
                     else:
                         st.error("Compound not found within the PubChem archive.")
                         smiles_string = None
                 except Exception as e:
                     st.error("Failure accessing the PubChem Archive.")
                     smiles_string = None
+            else:
+                description = "Custom SMILES structures are synthesized manually; clinical biographies are only available for recognized nomenclature queries."
 
             if smiles_string:
                 mol = Chem.MolFromSmiles(smiles_string)
@@ -322,6 +334,7 @@ if analyze_btn:
                     st.session_state.analysis_results = {
                         "smiles": smiles_string,
                         "name": compound_name,
+                        "description": description,
                         "num_chiral": num_chiral,
                         "R": R_count, "S": S_count, "U": unknown,
                         "achiral_sp3": achiral_sp3,
@@ -337,8 +350,14 @@ if st.session_state.analysis_results:
     res = st.session_state.analysis_results
     
     st.markdown("<br>", unsafe_allow_html=True)
-    tab1, tab_desc, tab2, tab3 = st.tabs(["Analytical Parameters", "Molecular Descriptors", "2D Highlighting", "3D Projection"])
+    tab_bio, tab1, tab_desc, tab2, tab3 = st.tabs(["Molecular Biography", "Analytical Parameters", "Molecular Descriptors", "2D Highlighting", "3D Projection"])
     
+    with tab_bio:
+        st.markdown(f"### Historical & Clinical Summary")
+        st.write(res['description'])
+        st.markdown("---")
+        st.info("⚡ *Biography data is fetched dynamically from clinical archives via PubChem REST API.*")
+
     with tab1:
         c1, c2 = st.columns(2)
         with c1:
