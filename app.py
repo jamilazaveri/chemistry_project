@@ -319,6 +319,8 @@ if analyze_btn:
 
                     # --- Molecular Descriptors & Lipinski Rules ---
                     mol_wt = Descriptors.MolWt(mol)
+                    exact_mass = Descriptors.ExactMolWt(mol)
+                    formula = Chem.rdMolDescriptors.CalcMolFormula(mol)
                     logp = Descriptors.MolLogP(mol)
                     tpsa = Descriptors.TPSA(mol)
                     hbd = Lipinski.NumHDonors(mol)
@@ -354,7 +356,12 @@ if analyze_btn:
                                 st.write("Absence of structural chirality recognized within this framework.")
 
                     with tab_desc:
-                        st.markdown("### Molecular Properties")
+                        st.markdown("### Molecular Descriptive Data")
+                        col_f1, col_f2 = st.columns(2)
+                        col_f1.markdown(f"**Chemical Formula:** `{formula}`")
+                        col_f2.markdown(f"**Exact Mass:** `{exact_mass:.4f} Da`")
+                        
+                        st.markdown("---")
                         col1, col2, col3 = st.columns(3)
                         col1.metric("Molecular Weight", f"{mol_wt:.2f} Da")
                         col2.metric("LogP", f"{logp:.2f}")
@@ -442,6 +449,8 @@ ACADEMIC REPORT: STEREOCHEMICAL ANALYSIS
 ========================================
 Compound: {compound_name}
 SMILES: {smiles_string}
+Formula: {formula}
+Exact Mass: {exact_mass:.4f} Da
 
 CHIRAL ANALYSIS:
 - Total Chiral Centers: {num_chiral}
