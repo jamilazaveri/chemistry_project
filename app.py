@@ -414,7 +414,10 @@ if st.session_state.analysis_results:
         styles = {"Stick": {'stick': {}}, "Sphere": {'sphere': {}}, "Line": {'line': {}}, "Cross": {'cross': {}}}
         view.setStyle(styles.get(model_style))
         view.setBackgroundColor('#2a231c')
-        view.spin(True) if st.checkbox("Enable 360° Structural Rotation") else view.spin(False)
+        if st.checkbox("Enable 360° Structural Rotation"):
+            view.spin(True)
+        else:
+            view.spin(False)
         view.zoomTo()
         showmol(view, height=500, width=700)
 
