@@ -39,13 +39,18 @@ def set_bg():
                 background-position: center;
                 background-attachment: fixed;
             }}
-            .main .block-container {{
-                background-color: rgba(18, 16, 14, 0.93) !important;
-                border-radius: 15px;
+            /* Safely target the main application box to give it a dark protective shell */
+            [data-testid="stAppViewBlockContainer"], .main .block-container {{
+                background-color: rgba(15, 12, 11, 0.97) !important;
+                border-radius: 20px;
                 padding: 40px;
-                border: 1px solid #cfab7a55;
-                box-shadow: 0px 0px 40px rgba(0,0,0,0.9);
-                margin-top: 30px;
+                border: 1px solid #cfab7a88;
+                box-shadow: 0px 0px 50px rgba(0,0,0,0.95);
+                margin-top: 20px;
+            }}
+            /* Ensure text pops aggressively no matter what */
+            p, h1, h2, h3, h4, span, label, div {{
+                text-shadow: 0px 2px 4px rgba(0,0,0,0.9);
             }}
         </style>
         """, unsafe_allow_html=True)
