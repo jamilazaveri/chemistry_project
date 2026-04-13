@@ -405,21 +405,42 @@ if st.session_state.analysis_results:
     with tab3:
         st.markdown("### Interactive 3D Model")
         model_style = st.selectbox("Orbital Representation", ["Stick", "Sphere", "Line", "Cross"], index=0)
-        mol_h = Chem.AddHs(Chem.MolFromSmiles(res['smiles']))
-        AllChem.EmbedMolecule(mol_h, AllChem.ETKDGv3())
-        AllChem.MMFFOptimizeMolecule(mol_h)
-        mb = Chem.MolToMolBlock(mol_h)
-        view = py3Dmol.view(width=700, height=500)
-        view.addModel(mb, 'sdf')
-        styles = {"Stick": {'stick': {}}, "Sphere": {'sphere': {}}, "Line": {'line': {}}, "Cross": {'cross': {}}}
-        view.setStyle(styles.get(model_style))
-        view.setBackgroundColor('#2a231c')
-        if st.checkbox("Enable 360° Structural Rotation"):
-            view.spin(True)
+        
+        # Prepare Molecule
+        source_mol = Chem.MolFromSmiles(res['smiles'])
+        if source_mol:
+            mol_h = Chem.AddHs(source_mol)
+            # Try 3D Embedding with multiple attempts
+            with st.spinner("Calculating 3D Atomic Coordinates..."):
+                status = AllChem.EmbedMolecule(mol_h, AllChem.ETKDGv3(), randomSeed=42)
+                if status == -1:
+                    # Fallback attempt
+                    status = AllChem.EmbedMolecule(mol_h, randomSeed=42)
+            
+            if status != -1:
+                AllChem.MMFFOptimizeMolecule(mol_h)
+                mb = Chem.MolToMolBlock(mol_h)
+                
+                view = py3Dmol.view(width=700, height=500)
+                view.addModel(mb, 'sdf')
+                
+                styles = {"Stick": {'stick': {}}, "Sphere": {'sphere': {}}, "Line": {'line': {}}, "Cross": {'cross': {}}}
+                view.setStyle(styles.get(model_style))
+                
+                # Stark background for the viewer to ensure it's seen
+                view.setBackgroundColor('#1a1714')
+                
+                if st.checkbox("Enable 360° Structural Rotation", key="rotate_3d"):
+                    view.spin(True)
+                else:
+                    view.spin(False)
+                
+                view.zoomTo()
+                showmol(view, height=500, width=700)
+            else:
+                st.warning("⚠️ Critical: The structural complexity of this molecule prevents stable 3D coordinate synthesis.")
         else:
-            view.spin(False)
-        view.zoomTo()
-        showmol(view, height=500, width=700)
+            st.error("Failed to parse molecule for 3D Projection.")
 
     # Methodology Expander
     with st.expander("📚 Methodology & Cahn-Ingold-Prelog (CIP) Rules"):
