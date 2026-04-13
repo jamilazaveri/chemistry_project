@@ -8,41 +8,121 @@ from stmol import showmol
 
 # --- 1. SET UP THE PAGE ---
 st.set_page_config(
-    page_title="Chiral Spotlight", 
-    page_icon="🧬",
+    page_title="Virtual Chemistry Lab", 
+    page_icon="☕",
     layout="centered"
 )
 
-# --- 2. CUSTOM CSS STYLING ---
+# --- 2. CUSTOM CSS STYLING (COZY CHEMISTRY VIBES) ---
 st.markdown("""
 <style>
-    /* Dark Theme & Beautiful Gradients */
+    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&family=Playfair+Display:ital,wght@0,600;1,600&display=swap');
+    
+    /* Cozy Coffee/Chemistry Background */
     .stApp {
-        background-color: #0E1117;
+        background: linear-gradient(135deg, #fdfbf7 0%, #f4eade 100%);
+        color: #3e3328;
+        font-family: 'Nunito', sans-serif;
+    }
+    
+    h1, h2, h3 {
+        font-family: 'Playfair Display', serif !important;
+        color: #8b5e34 !important;
+    }
+
+    /* Floating Animation for Student Card */
+    @keyframes float {
+        0% { transform: translateY(0px); }
+        50% { transform: translateY(-8px); box-shadow: 0 15px 30px -5px rgba(139, 94, 52, 0.3); }
+        100% { transform: translateY(0px); }
     }
     
     .student-card {
-        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(10px);
         padding: 24px;
-        border-radius: 16px;
-        border: 1px solid #334155;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+        border-radius: 20px;
+        border: 2px solid #ebdeb3;
+        box-shadow: 0 10px 25px -5px rgba(139, 94, 52, 0.15);
         margin-bottom: 2rem;
-        color: #e2e8f0;
+        color: #5c4731;
+        animation: float 6s ease-in-out infinite;
     }
     .student-card h2 {
         margin-top: 0;
-        color: #38bdf8;
-        font-family: monospace;
-        letter-spacing: 1px;
+        color: #8b5e34 !important;
+        letter-spacing: 0.5px;
+        text-align: center;
     }
     .student-details {
         font-size: 1.15em;
         line-height: 1.6;
+        text-align: center;
     }
     .highlight-span {
-        color: #fbbf24;
+        color: #d18134;
+        font-weight: 800;
+        background: rgba(209, 129, 52, 0.15);
+        padding: 2px 10px;
+        border-radius: 12px;
+    }
+    
+    /* Shiny Animated Button */
+    @keyframes pulse-mocha {
+      0% { box-shadow: 0 0 0 0 rgba(139, 94, 52, 0.6); }
+      70% { box-shadow: 0 0 0 15px rgba(139, 94, 52, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(139, 94, 52, 0); }
+    }
+    
+    /* Enhance buttons to look cute & cozy */
+    .stButton>button {
+        background: linear-gradient(135deg, #a67c52 0%, #8b5e34 100%);
+        color: #ffffff;
         font-weight: bold;
+        font-size: 1.1em;
+        border-radius: 16px;
+        border: none;
+        padding: 10px;
+        transition: all 0.3s ease;
+        animation: pulse-mocha 2.5s infinite;
+    }
+    .stButton>button:hover {
+        transform: scale(1.03) translateY(-2px);
+        background: linear-gradient(135deg, #b88d61 0%, #a67c52 100%);
+        color: white;
+        animation: none;
+        box-shadow: 0 8px 20px rgba(139, 94, 52, 0.4);
+    }
+    
+    /* Soft inputs */
+    .stTextInput>div>div>input {
+        border-radius: 12px;
+        border: 2px solid #ebdeb3;
+        background-color: white;
+        padding: 12px;
+        color: #3e3328;
+        font-family: monospace;
+        letter-spacing: 0.5px;
+    }
+    .stTextInput>div>div>input:focus {
+        border-color: #d18134;
+        box-shadow: 0 0 12px rgba(209, 129, 52, 0.2);
+    }
+    
+    /* Custom tabs for cozy ui */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 12px;
+        background-color: transparent;
+    }
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 12px 12px 0 0;
+        padding: 12px 24px;
+        background-color: rgba(235, 222, 179, 0.3);
+        border: none;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #8b5e34 !important;
+        color: white !important;
     }
     
     /* Center images */
@@ -50,6 +130,10 @@ st.markdown("""
         display: block;
         margin-left: auto;
         margin-right: auto;
+        transition: transform 0.5s ease;
+    }
+    svg:hover {
+        transform: scale(1.02);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -57,26 +141,26 @@ st.markdown("""
 # --- 3. STUDENT DETAILS BOX ---
 st.markdown("""
 <div class="student-card">
-    <h2>👨‍🔬 Student Details</h2>
+    <h2>🧪 Student Project Outline 🤎</h2>
     <div class="student-details">
         <strong>Name:</strong> <span class="highlight-span">Jamila Mustaali Zaveri</span><br>
         <strong>Registration Number:</strong> <span class="highlight-span">RA2511026050033</span><br>
-        <strong>Class/Sec:</strong> AIML-A<br>
-        <strong>Year/Sem:</strong> I / II
+        <strong>Class/Sec:</strong> <span class="highlight-span">AIML-A</span> • <strong>Year/Sem:</strong> <span class="highlight-span">I / II</span>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
 # --- 4. APP HEADER & INPUT ---
-st.title("🔬 Chiral Spotlight")
-st.write("A professional tool for analyzing stereocenters and displaying detailed 2D/3D chemical properties of any molecule.")
+st.title("☕ Virtual Chemistry Lab")
+st.markdown("##### *A cozy, interactive aesthetic analyzer for molecules & stereocenters.*")
+st.markdown("---")
 
 smiles_input = st.text_input(
-    "Enter SMILES string 👇", 
-    value="CCOC(=O)[C@H]1[C@H](O)[C@@H](OC)[C@H](N)[C@H](OC(C)=O)C1",
+    "✨ Paste your SMILES string here:", 
+    value="FC(F)(F)C1=CC(N2C(=O)C[C@H](N)CC2=O)=NN1CC1=C(F)C=C(F)C=C1F",
 )
 
-analyze_btn = st.button("🚀 Analyze Molecule", use_container_width=True)
+analyze_btn = st.button("🪄 Sparkle & Analyze!", use_container_width=True)
 
 # --- 5. MAIN LOGIC ---
 if analyze_btn:
@@ -124,6 +208,7 @@ if analyze_btn:
                             achiral_sp3 += 1
 
                 st.success("✅ Analysis Complete!")
+                st.balloons()
 
                 # --- 6. DISPLAY TABS ---
                 tab1, tab2, tab3 = st.tabs(["📊 Results", "🎨 2D Highlighted", "🔮 3D View"])
