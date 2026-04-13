@@ -14,15 +14,57 @@ st.set_page_config(
     layout="centered"
 )
 
-# --- 2. CUSTOM CSS STYLING (DARK ACADEMIA) ---
+# --- 2. CUSTOM CSS STYLING (DARK ACADEMIA & CHALKBOARD BACKGROUND) ---
+import base64
+import os
+
+def set_bg():
+    # Try looking for bg.jpg or bg.png or bg.jpeg
+    bg_file = None
+    for ext in ['jpg', 'png', 'jpeg']:
+        if os.path.exists(f"bg.{ext}"):
+            bg_file = f"bg.{ext}"
+            break
+            
+    if bg_file:
+        with open(bg_file, "rb") as f:
+            encoded_string = base64.b64encode(f.read()).decode()
+        ext = bg_file.split('.')[-1]
+        
+        st.markdown(f"""
+        <style>
+            .stApp {{
+                background-image: url(data:image/{ext};base64,{encoded_string});
+                background-size: cover;
+                background-position: center;
+                background-attachment: fixed;
+            }}
+            .main .block-container {{
+                background-color: rgba(18, 16, 14, 0.93) !important;
+                border-radius: 15px;
+                padding: 40px;
+                border: 1px solid #cfab7a55;
+                box-shadow: 0px 0px 40px rgba(0,0,0,0.9);
+                margin-top: 30px;
+            }}
+        </style>
+        """, unsafe_allow_html=True)
+    else:
+        # Fallback dark background
+        st.markdown("""
+        <style>
+            .stApp {{
+                background-color: #12100e;
+                background-image: radial-gradient(circle at center, #1b1714 0%, #0a0807 100%);
+            }}
+        </style>
+        """, unsafe_allow_html=True)
+
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap');
     
-    /* Dark Academia Background */
     .stApp {
-        background-color: #12100e;
-        background-image: radial-gradient(circle at center, #1b1714 0%, #0a0807 100%);
         color: #d4c8b2;
         font-family: 'EB Garamond', serif;
         font-size: 18px;
@@ -153,6 +195,9 @@ st.markdown("""
     
 </style>
 """, unsafe_allow_html=True)
+
+# Load the background if it exists
+set_bg()
 
 # --- 3. STUDENT DETAILS BOX ---
 st.markdown("""
