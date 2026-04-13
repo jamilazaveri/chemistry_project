@@ -39,12 +39,12 @@ def set_bg():
                 background-position: center;
                 background-attachment: fixed;
             }}
-            /* Safely target the main application box to give it a dark protective shell across ALL Streamlit versions */
+            /* Safely target the main application box */
             [data-testid="block-container"],
             [data-testid="stAppViewBlockContainer"], 
             .main .block-container,
             .appview-container section > div:first-of-type {{
-                background-color: rgba(15, 12, 11, 0.97) !important;
+                background-color: rgba(15, 12, 11, 0.80) !important;
                 border-radius: 20px;
                 padding: 50px !important;
                 border: 1px solid #cfab7a88;
@@ -192,12 +192,13 @@ st.markdown("""
         border-bottom: 2px solid #cfab7a;
     }
     
-    /* SVG border */
+    /* SVG ancient parchment styling */
     .svg-container {
-        border: 1px solid #cfab7a33;
-        padding: 15px;
-        background-color: #faf7f0; 
-        border-radius: 2px;
+        border: 2px solid #8c7b64;
+        padding: 10px;
+        background: radial-gradient(circle, #f3e9d2 0%, #d8c29e 100%); 
+        border-radius: 8px;
+        box-shadow: inset 0 0 30px rgba(90, 75, 60, 0.5), 0 5px 20px rgba(0,0,0,1.0);
     }
     
     /* Disable balloons or sparkles */
@@ -326,10 +327,9 @@ if analyze_btn:
                         try:
                             drawer = rdMolDraw2D.MolDraw2DSVG(600, 450)
                             opts = drawer.drawOptions()
-                            # Pure white background for stark contrast so molecules remain clear
-                            opts.clearBackground = True
-                            # Gold highlights for dark academia feel
-                            opts.highlightDefaultRenderer = rdMolDraw2D.DrawColour(0.81, 0.67, 0.48)
+                            opts.clearBackground = False
+                            # Deep crimson highlights for contrast on ancient parchment
+                            opts.highlightDefaultRenderer = rdMolDraw2D.DrawColour(0.65, 0.15, 0.15)
                             
                             drawer.DrawMolecule(mol, highlightAtoms=highlight_atoms)
                             drawer.FinishDrawing()
@@ -354,7 +354,7 @@ if analyze_btn:
                                 view = py3Dmol.view(width=700, height=500)
                                 view.addModel(mb, 'sdf')
                                 view.setStyle({'stick': {}})
-                                view.setBackgroundColor('#12100e')
+                                view.setBackgroundColor('#2a231c')
                                 view.zoomTo()
                                 
                                 showmol(view, height=500, width=700)
