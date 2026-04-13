@@ -390,8 +390,24 @@ if st.session_state.analysis_results:
         styles = {"Stick": {'stick': {}}, "Sphere": {'sphere': {}}, "Line": {'line': {}}, "Cross": {'cross': {}}}
         view.setStyle(styles.get(model_style))
         view.setBackgroundColor('#2a231c')
+        view.spin(True) if st.checkbox("Enable 360° Structural Rotation") else view.spin(False)
         view.zoomTo()
         showmol(view, height=500, width=700)
+
+    # Methodology Expander
+    with st.expander("📚 Methodology & Cahn-Ingold-Prelog (CIP) Rules"):
+        st.markdown("""
+        This analytical instrument utilizes the **RDKit** chemoinformatics engine to evaluate stereochemical configurations.
+        
+        **Stereochemistry Logic:**
+        1.  **Prioritization:** Atoms surrounding a chiral center are ranked by atomic number (CIP sequence rules).
+        2.  **Projection:** The molecule is oriented such that the lowest priority group points away from the observer.
+        3.  **Classification:**
+            -   **Rectus (R):** Clockwise sequence (High → Low priority).
+            -   **Sinister (S):** Counter-clockwise sequence.
+            
+        **Lipinski Screening:** Evaluates the 'Drug-likeness' of the spatial complex based on Molecular Weight, Hydrophobicity (LogP), and Hydrogen Bonding capacity.
+        """)
 
     # Download Report
     report = f"REPORT: {res['name']}\nSMILES: {res['smiles']}\nFormula: {res['formula']}\nChiral Centers: {res['num_chiral']}"
