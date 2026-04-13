@@ -217,7 +217,7 @@ st.markdown("""
     <h2>Academic Project Portfolio</h2>
     <div class="student-details">
         <strong>Scholar:</strong> <span class="highlight-span">Jamila Mustaali Zaveri</span><br>
-        <strong>Registration Protocol:</strong> <span class="highlight-span">RA2511026050033</span><br>
+        <strong>Registration Number:</strong> <span class="highlight-span">RA2511026050033</span><br>
         <strong>Division:</strong> <span class="highlight-span">AIML-A</span> &nbsp;|&nbsp; <strong>Term:</strong> <span class="highlight-span">I / II</span>
     </div>
 </div>
