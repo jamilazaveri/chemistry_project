@@ -4,6 +4,8 @@ from rdkit import Chem
 from rdkit.Chem import Draw
 from rdkit.Chem.Draw import rdMolDraw2D
 from rdkit.Chem import AllChem
+from rdkit.Chem import Descriptors
+from rdkit.Chem import Lipinski
 import py3Dmol
 from stmol import showmol
 
@@ -228,10 +230,27 @@ st.markdown("<p style='text-align: center; color: #8c7b64; font-size: 1.1em; mar
 # Selection for input type
 search_type = st.radio("Query Paradigm Selection", ["Query by Chemical Nomenclature (PubChem)", "Query by SMILES String"])
 
+# Examples
+example_mols = {
+    "Sitagliptin": "FC(F)(F)C1=CC(N2C(=O)C[C@H](N)CC2=O)=NN1CC1=C(F)C=C(F)C=C1F",
+    "Oseltamivir": "CCOC(=O)[C@H]1[C@H](O)[C@@H](OC)[C@H](N)[C@H](OC(C)=O)C1",
+    "Aspirin": "CC(=O)Oc1ccccc1C(=O)O",
+    "Ibuprofen": "CC(C)Cc1ccc(cc1)C(C)C(=O)O",
+    "Penicillin G": "CC1([C@@H](N2[C@H](S1)[C@@H](C2=O)NC(=O)Cc3ccccc3)C(=O)O)C"
+}
+selected_example = st.selectbox("Bibliographic Examples (Quick Select)", ["Custom Query"] + list(example_mols.keys()))
+
+default_val = ""
+if selected_example != "Custom Query":
+    if search_type == "Query by Chemical Nomenclature (PubChem)":
+        default_val = selected_example
+    else:
+        default_val = example_mols[selected_example]
+
 if search_type == "Query by Chemical Nomenclature (PubChem)":
-    query_input = st.text_input("Enter Standard IUPAC or Common Name:", value="Aspirin")
+    query_input = st.text_input("Enter Standard IUPAC or Common Name:", value=default_val or "Aspirin")
 else:
-    query_input = st.text_input("Enter SMILES Notation:", value="FC(F)(F)C1=CC(N2C(=O)C[C@H](N)CC2=O)=NN1CC1=C(F)C=C(F)C=C1F")
+    query_input = st.text_input("Enter SMILES Notation:", value=default_val or "FC(F)(F)C1=CC(N2C(=O)C[C@H](N)CC2=O)=NN1CC1=C(F)C=C(F)C=C1F")
 
 analyze_btn = st.button("Commence Analysis", use_container_width=True)
 
@@ -298,9 +317,24 @@ if analyze_btn:
                             if atom.GetIdx() not in chiral_indices_h:
                                 achiral_sp3 += 1
 
+                    # --- Molecular Descriptors & Lipinski Rules ---
+                    mol_wt = Descriptors.MolWt(mol)
+                    logp = Descriptors.MolLogP(mol)
+                    tpsa = Descriptors.TPSA(mol)
+                    hbd = Lipinski.NumHDonors(mol)
+                    hba = Lipinski.NumHAcceptors(mol)
+                    rot_bonds = Lipinski.NumRotatableBonds(mol)
+                    
+                    lipinski_violations = sum([
+                        mol_wt > 500,
+                        logp > 5,
+                        hbd > 5,
+                        hba > 10
+                    ])
+
                     # --- 6. DISPLAY TABS ---
                     st.markdown("<br>", unsafe_allow_html=True)
-                    tab1, tab2, tab3 = st.tabs(["Analytical Parameters", "2D Highlighting", "3D Projection"])
+                    tab1, tab_desc, tab2, tab3 = st.tabs(["Analytical Parameters", "Molecular Descriptors", "2D Highlighting", "3D Projection"])
                     
                     with tab1:
                         c1, c2 = st.columns(2)
@@ -318,6 +352,33 @@ if analyze_btn:
                                 st.table(results_data)
                             else:
                                 st.write("Absence of structural chirality recognized within this framework.")
+
+                    with tab_desc:
+                        st.markdown("### Molecular Properties")
+                        col1, col2, col3 = st.columns(3)
+                        col1.metric("Molecular Weight", f"{mol_wt:.2f} Da")
+                        col2.metric("LogP", f"{logp:.2f}")
+                        col3.metric("TPSA", f"{tpsa:.2f} Å²")
+
+                        col4, col5, col6 = st.columns(3)
+                        col4.metric("H-Bond Donors", hbd)
+                        col5.metric("H-Bond Acceptors", hba)
+                        col6.metric("Rotatable Bonds", rot_bonds)
+
+                        st.markdown("---")
+                        st.markdown("### Lipinski's Rule of Five")
+                        if lipinski_violations == 0:
+                            st.success("✅ This molecule adheres to Lipinski's Rule of Five (Drug-like).")
+                        else:
+                            st.warning(f"⚠️ This molecule has {lipinski_violations} Lipinski violation(s).")
+                        
+                        st.markdown("""
+                        The Rule of Five predicts if a compound has properties that would make it a likely orally active drug in humans.
+                        - MW ≤ 500 Da
+                        - LogP ≤ 5
+                        - H-Bond Donors ≤ 5
+                        - H-Bond Acceptors ≤ 10
+                        """)
                                 
                     with tab2:
                         Chem.AssignStereochemistry(mol, force=True, cleanIt=True)
@@ -342,6 +403,9 @@ if analyze_btn:
 
                     with tab3:
                         try:
+                            st.markdown("### Interactive 3D Model")
+                            style_choice = st.selectbox("Orbital Representation Style", ["Stick", "Sphere", "Line", "Cross"])
+                            
                             params = AllChem.ETKDGv3()
                             params.randomSeed = 42
                             res = AllChem.EmbedMolecule(mol_with_h, params)
@@ -353,7 +417,16 @@ if analyze_btn:
                                 
                                 view = py3Dmol.view(width=700, height=500)
                                 view.addModel(mb, 'sdf')
-                                view.setStyle({'stick': {}})
+                                
+                                # Set style based on user choice
+                                style_dict = {
+                                    "Stick": {'stick': {}},
+                                    "Sphere": {'sphere': {}},
+                                    "Line": {'line': {}},
+                                    "Cross": {'cross': {}}
+                                }
+                                view.setStyle(style_dict.get(style_choice, {'stick': {}}))
+                                
                                 view.setBackgroundColor('#2a231c')
                                 view.zoomTo()
                                 
@@ -361,3 +434,33 @@ if analyze_btn:
                                 st.caption("Instruct: Scroll to magnify; Select and drag to alter structural rotation.")
                         except Exception as e:
                             st.error(f"Visual projection failure: {e}")
+
+                # --- 7. DOWNLOAD OPTION ---
+                st.markdown("---")
+                analysis_text = f"""
+ACADEMIC REPORT: STEREOCHEMICAL ANALYSIS
+========================================
+Compound: {compound_name}
+SMILES: {smiles_string}
+
+CHIRAL ANALYSIS:
+- Total Chiral Centers: {num_chiral}
+- R Configurations: {R_count}
+- S Configurations: {S_count}
+- Achiral (sp3) Carbons: {achiral_sp3}
+
+PHARMACOLOGICAL DESCRIPTORS:
+- MolWt: {mol_wt:.2f}
+- LogP: {logp:.2f}
+- TPSA: {tpsa:.2f}
+- H-Bond Donors: {hbd}
+- H-Bond Acceptors: {hba}
+- Lipinski Violations: {lipinski_violations}
+"""
+                st.download_button(
+                    label="📜 Download Analytical Report",
+                    data=analysis_text,
+                    file_name=f"{compound_name.replace(' ', '_')}_analysis.txt",
+                    mime="text/plain",
+                    use_container_width=True
+                )
