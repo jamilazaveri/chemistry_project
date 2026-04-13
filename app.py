@@ -39,14 +39,18 @@ def set_bg():
                 background-position: center;
                 background-attachment: fixed;
             }}
-            /* Safely target the main application box to give it a dark protective shell */
-            [data-testid="stAppViewBlockContainer"], .main .block-container {{
+            /* Safely target the main application box to give it a dark protective shell across ALL Streamlit versions */
+            [data-testid="block-container"],
+            [data-testid="stAppViewBlockContainer"], 
+            .main .block-container,
+            .appview-container section > div:first-of-type {{
                 background-color: rgba(15, 12, 11, 0.97) !important;
                 border-radius: 20px;
-                padding: 40px;
+                padding: 50px !important;
                 border: 1px solid #cfab7a88;
                 box-shadow: 0px 0px 50px rgba(0,0,0,0.95);
-                margin-top: 20px;
+                margin-top: 30px;
+                margin-bottom: 30px;
             }}
             /* Ensure text pops aggressively no matter what */
             p, h1, h2, h3, h4, span, label, div {{
