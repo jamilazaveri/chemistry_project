@@ -287,7 +287,7 @@ if analyze_btn:
                             
                         results_data.append({
                             "Atom Index": idx, 
-                            "Atomic Species": symbol, 
+                            "Symbol": symbol, 
                             "Configuration": config
                         })
                     
@@ -304,15 +304,15 @@ if analyze_btn:
                     with tab1:
                         c1, c2 = st.columns(2)
                         with c1:
-                            st.markdown("### Structural Overview")
+                            st.markdown("### Results")
                             st.markdown(f"**Total Chiral Centers:** {num_chiral}")
-                            st.markdown(f"**Rectus (R) Domains:** {R_count}")
-                            st.markdown(f"**Sinister (S) Domains:** {S_count}")
-                            st.markdown(f"**Indeterminate Arrays:** {unknown}")
-                            st.markdown(f"**Achiral (sp³ hybridized) Carbons:** {achiral_sp3}")
+                            st.markdown(f"**R Configuration:** {R_count}")
+                            st.markdown(f"**S Configuration:** {S_count}")
+                            st.markdown(f"**Unassigned:** {unknown}")
+                            st.markdown(f"**Achiral (sp3) Carbons:** {achiral_sp3}")
 
                         with c2:
-                            st.markdown("### Stereocenter Details")
+                            st.markdown("### Chiral Centers Details")
                             if results_data:
                                 st.table(results_data)
                             else:
