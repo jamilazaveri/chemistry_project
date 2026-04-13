@@ -328,6 +328,13 @@ if analyze_btn:
                     hbd = Lipinski.NumHDonors(mol)
                     hba = Lipinski.NumHAcceptors(mol)
                     rot_bonds = Lipinski.NumRotatableBonds(mol)
+                    
+                    # Advanced Science Properties
+                    formal_charge = Chem.GetFormalCharge(mol)
+                    # For a neutral drug molecule, multiplicity is usually 1 (singlet)
+                    # calculated as 2S + 1 where S is the total spin
+                    multiplicity = 1 
+                    molar_refractivity = Descriptors.MolMR(mol)
                     lip_viol = sum([mol_wt > 500, logp > 5, hbd > 5, hba > 10])
 
                     # Store in Session State
@@ -341,6 +348,9 @@ if analyze_btn:
                         "results_data": results_data,
                         "mol_wt": mol_wt, "exact_mass": exact_mass, "formula": formula,
                         "logp": logp, "tpsa": tpsa, "hbd": hbd, "hba": hba, "rot": rot_bonds,
+                        "formal_charge": formal_charge,
+                        "multiplicity": multiplicity,
+                        "molar_refractivity": molar_refractivity,
                         "lip_viol": lip_viol
                     }
                     st.success("✅ Analysis Synthesized.")
@@ -376,9 +386,19 @@ if st.session_state.analysis_results:
         st.markdown("### Molecular Descriptive Data")
         st.markdown(f"**Formula:** `{res['formula']}` &nbsp;|&nbsp; **Exact Mass:** `{res['exact_mass']:.4f} Da`")
         col1, col2, col3 = st.columns(3)
-        col1.metric("Mol Wt", f"{res['mol_wt']:.2f}")
+        col1.metric("Molecular Weight", f"{res['mol_wt']:.2f} Da")
         col2.metric("LogP", f"{res['logp']:.2f}")
-        col3.metric("TPSA", f"{res['tpsa']:.2f}")
+        col3.metric("TPSA", f"{res['tpsa']:.2f} Å²")
+
+        col4, col5, col6 = st.columns(3)
+        col4.metric("H-Bond Donors", res['hbd'])
+        col5.metric("H-Bond Acceptors", res['hba'])
+        col6.metric("Rotatable Bonds", res['rot'])
+
+        col7, col8, col9 = st.columns(3)
+        col7.metric("Formal Charge", res['formal_charge'])
+        col8.metric("Spin Multiplicity", res['multiplicity'])
+        col9.metric("Molar Refractivity", f"{res['molar_refractivity']:.2f}")
         
         st.markdown("---")
         st.markdown("### Lipinski's Rule of Five")
@@ -412,7 +432,9 @@ if st.session_state.analysis_results:
             mol_h = Chem.AddHs(source_mol)
             # Try 3D Embedding with multiple attempts
             with st.spinner("Calculating 3D Atomic Coordinates..."):
-                status = AllChem.EmbedMolecule(mol_h, AllChem.ETKDGv3(), randomSeed=42)
+                params = AllChem.ETKDGv3()
+                params.randomSeed = 42
+                status = AllChem.EmbedMolecule(mol_h, params)
                 if status == -1:
                     # Fallback attempt
                     status = AllChem.EmbedMolecule(mol_h, randomSeed=42)
