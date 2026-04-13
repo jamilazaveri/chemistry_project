@@ -372,8 +372,13 @@ if st.session_state.analysis_results:
         chiral_centers_orig = Chem.FindMolChiralCenters(mol, includeUnassigned=True)
         highlight_atoms = [idx for idx, _ in chiral_centers_orig]
         drawer = rdMolDraw2D.MolDraw2DSVG(600, 450)
-        drawer.drawOptions().clearBackground = False
-        drawer.drawOptions().highlightDefaultRenderer = rdMolDraw2D.DrawColour(0.65, 0.15, 0.15)
+        opts = drawer.drawOptions()
+        opts.clearBackground = False
+        # Use a simpler highlight color setting if available
+        try:
+            opts.highlightColour = rdMolDraw2D.DrawColour(0.65, 0.15, 0.15)
+        except:
+            pass
         drawer.DrawMolecule(mol, highlightAtoms=highlight_atoms)
         drawer.FinishDrawing()
         st.markdown(f'<div class="svg-container" style="text-align: center;">{drawer.GetDrawingText()}</div>', unsafe_allow_html=True)
