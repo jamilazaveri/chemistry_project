@@ -254,7 +254,11 @@ else:
 
 analyze_btn = st.button("Commence Analysis", use_container_width=True)
 
-# --- 5. MAIN LOGIC ---
+# --- 5. INITIALIZE SESSION STATE ---
+if 'analysis_results' not in st.session_state:
+    st.session_state.analysis_results = None
+
+# --- 6. MAIN LOGIC TRIGGER ---
 if analyze_btn:
     if not query_input.strip():
         st.error("Please provide a valid query.")
@@ -262,62 +266,48 @@ if analyze_btn:
         with st.spinner("Consulting archives and synthesizing structural models..."):
             
             smiles_string = query_input.strip()
-            compound_name = "Custom SMILES"
+            compound_name = "Custom Molecule"
             
             # PubChem Search API integration
             if search_type == "Query by Chemical Nomenclature (PubChem)":
                 try:
                     compounds = pcp.get_compounds(query_input.strip(), 'name')
                     if compounds:
-                        # Grab the first match smiles
                         smiles_string = compounds[0].isomeric_smiles
                         compound_name = compounds[0].iupac_name or query_input.strip()
-                        st.info(f"Successfully retrieved from PubChem Archive: **{compound_name.title()}** | Canonical SMILES: `{smiles_string}`")
                     else:
-                        st.error("Compound not found within the PubChem archive. Please verify the nomenclature.")
+                        st.error("Compound not found within the PubChem archive.")
                         smiles_string = None
                 except Exception as e:
-                    st.error("Failure accessing the PubChem Archive. Please ensure the term is a valid chemical or internet connection is active.")
+                    st.error("Failure accessing the PubChem Archive.")
                     smiles_string = None
 
             if smiles_string:
                 mol = Chem.MolFromSmiles(smiles_string)
-                
-                if mol is None:
-                    st.error("Synthesis Failed: The generated or provided SMILES string is invalid.")
-                else:
+                if mol:
+                    # Deep Analysis
                     mol_with_h = Chem.AddHs(mol)
                     Chem.AssignStereochemistry(mol_with_h, force=True, cleanIt=True)
-                    
-                    # Analyze chirality
                     chiral_centers = Chem.FindMolChiralCenters(mol_with_h, includeUnassigned=True)
                     num_chiral = len(chiral_centers)
+                    
                     R_count = S_count = unknown = 0
-                    chiral_indices_h = []
                     results_data = []
-
+                    chiral_indices_h = []
                     for idx, config in chiral_centers:
                         atom = mol_with_h.GetAtomWithIdx(idx)
                         chiral_indices_h.append(idx)
-                        symbol = atom.GetSymbol()
-                        
                         if config == 'R': R_count += 1
                         elif config == 'S': S_count += 1
                         else: unknown += 1
-                            
-                        results_data.append({
-                            "Atom Index": idx, 
-                            "Symbol": symbol, 
-                            "Configuration": config
-                        })
+                        results_data.append({"Atom Index": idx, "Symbol": atom.GetSymbol(), "Configuration": config})
                     
                     achiral_sp3 = 0
                     for atom in mol_with_h.GetAtoms():
                         if atom.GetAtomicNum() == 6 and atom.GetHybridization() == Chem.HybridizationType.SP3:
-                            if atom.GetIdx() not in chiral_indices_h:
-                                achiral_sp3 += 1
+                            if atom.GetIdx() not in chiral_indices_h: achiral_sp3 += 1
 
-                    # --- Molecular Descriptors & Lipinski Rules ---
+                    # Descriptors
                     mol_wt = Descriptors.MolWt(mol)
                     exact_mass = Descriptors.ExactMolWt(mol)
                     formula = Chem.rdMolDescriptors.CalcMolFormula(mol)
@@ -326,150 +316,84 @@ if analyze_btn:
                     hbd = Lipinski.NumHDonors(mol)
                     hba = Lipinski.NumHAcceptors(mol)
                     rot_bonds = Lipinski.NumRotatableBonds(mol)
-                    
-                    lipinski_violations = sum([
-                        mol_wt > 500,
-                        logp > 5,
-                        hbd > 5,
-                        hba > 10
-                    ])
+                    lip_viol = sum([mol_wt > 500, logp > 5, hbd > 5, hba > 10])
 
-                    # --- 6. DISPLAY TABS ---
-                    st.markdown("<br>", unsafe_allow_html=True)
-                    tab1, tab_desc, tab2, tab3 = st.tabs(["Analytical Parameters", "Molecular Descriptors", "2D Highlighting", "3D Projection"])
-                    
-                    with tab1:
-                        c1, c2 = st.columns(2)
-                        with c1:
-                            st.markdown("### Results")
-                            st.markdown(f"**Total Chiral Centers:** {num_chiral}")
-                            st.markdown(f"**R Configuration:** {R_count}")
-                            st.markdown(f"**S Configuration:** {S_count}")
-                            st.markdown(f"**Unassigned:** {unknown}")
-                            st.markdown(f"**Achiral (sp3) Carbons:** {achiral_sp3}")
+                    # Store in Session State
+                    st.session_state.analysis_results = {
+                        "smiles": smiles_string,
+                        "name": compound_name,
+                        "num_chiral": num_chiral,
+                        "R": R_count, "S": S_count, "U": unknown,
+                        "achiral_sp3": achiral_sp3,
+                        "results_data": results_data,
+                        "mol_wt": mol_wt, "exact_mass": exact_mass, "formula": formula,
+                        "logp": logp, "tpsa": tpsa, "hbd": hbd, "hba": hba, "rot": rot_bonds,
+                        "lip_viol": lip_viol
+                    }
+                    st.success("✅ Analysis Synthesized.")
 
-                        with c2:
-                            st.markdown("### Chiral Centers Details")
-                            if results_data:
-                                st.table(results_data)
-                            else:
-                                st.write("Absence of structural chirality recognized within this framework.")
+# --- 7. DISPLAY RESULTS (Persistent) ---
+if st.session_state.analysis_results:
+    res = st.session_state.analysis_results
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    tab1, tab_desc, tab2, tab3 = st.tabs(["Analytical Parameters", "Molecular Descriptors", "2D Highlighting", "3D Projection"])
+    
+    with tab1:
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown("### Results")
+            st.markdown(f"**Total Chiral Centers:** {res['num_chiral']}")
+            st.markdown(f"**R Configuration:** {res['R']}")
+            st.markdown(f"**S Configuration:** {res['S']}")
+            st.markdown(f"**Unassigned:** {res['U']}")
+            st.markdown(f"**Achiral (sp3) Carbons:** {res['achiral_sp3']}")
+        with c2:
+            st.markdown("### Chiral Centers Details")
+            if res['results_data']: st.table(res['results_data'])
+            else: st.write("No structural chirality recognized.")
 
-                    with tab_desc:
-                        st.markdown("### Molecular Descriptive Data")
-                        col_f1, col_f2 = st.columns(2)
-                        col_f1.markdown(f"**Chemical Formula:** `{formula}`")
-                        col_f2.markdown(f"**Exact Mass:** `{exact_mass:.4f} Da`")
-                        
-                        st.markdown("---")
-                        col1, col2, col3 = st.columns(3)
-                        col1.metric("Molecular Weight", f"{mol_wt:.2f} Da")
-                        col2.metric("LogP", f"{logp:.2f}")
-                        col3.metric("TPSA", f"{tpsa:.2f} Å²")
+    with tab_desc:
+        st.markdown("### Molecular Descriptive Data")
+        st.markdown(f"**Formula:** `{res['formula']}` &nbsp;|&nbsp; **Exact Mass:** `{res['exact_mass']:.4f} Da`")
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Mol Wt", f"{res['mol_wt']:.2f}")
+        col2.metric("LogP", f"{res['logp']:.2f}")
+        col3.metric("TPSA", f"{res['tpsa']:.2f}")
+        
+        st.markdown("---")
+        st.markdown("### Lipinski's Rule of Five")
+        if res['lip_viol'] == 0: st.success("✅ Adheres to Rule of Five.")
+        else: st.warning(f"⚠️ {res['lip_viol']} Violations.")
 
-                        col4, col5, col6 = st.columns(3)
-                        col4.metric("H-Bond Donors", hbd)
-                        col5.metric("H-Bond Acceptors", hba)
-                        col6.metric("Rotatable Bonds", rot_bonds)
+    with tab2:
+        mol = Chem.MolFromSmiles(res['smiles'])
+        Chem.AssignStereochemistry(mol, force=True, cleanIt=True)
+        chiral_centers_orig = Chem.FindMolChiralCenters(mol, includeUnassigned=True)
+        highlight_atoms = [idx for idx, _ in chiral_centers_orig]
+        drawer = rdMolDraw2D.MolDraw2DSVG(600, 450)
+        drawer.drawOptions().clearBackground = False
+        drawer.drawOptions().highlightDefaultRenderer = rdMolDraw2D.DrawColour(0.65, 0.15, 0.15)
+        drawer.DrawMolecule(mol, highlightAtoms=highlight_atoms)
+        drawer.FinishDrawing()
+        st.markdown(f'<div class="svg-container" style="text-align: center;">{drawer.GetDrawingText()}</div>', unsafe_allow_html=True)
 
-                        st.markdown("---")
-                        st.markdown("### Lipinski's Rule of Five")
-                        if lipinski_violations == 0:
-                            st.success("✅ This molecule adheres to Lipinski's Rule of Five (Drug-like).")
-                        else:
-                            st.warning(f"⚠️ This molecule has {lipinski_violations} Lipinski violation(s).")
-                        
-                        st.markdown("""
-                        The Rule of Five predicts if a compound has properties that would make it a likely orally active drug in humans.
-                        - MW ≤ 500 Da
-                        - LogP ≤ 5
-                        - H-Bond Donors ≤ 5
-                        - H-Bond Acceptors ≤ 10
-                        """)
-                                
-                    with tab2:
-                        Chem.AssignStereochemistry(mol, force=True, cleanIt=True)
-                        chiral_centers_orig = Chem.FindMolChiralCenters(mol, includeUnassigned=True)
-                        highlight_atoms = [idx for idx, _ in chiral_centers_orig]
-                        
-                        try:
-                            drawer = rdMolDraw2D.MolDraw2DSVG(600, 450)
-                            opts = drawer.drawOptions()
-                            opts.clearBackground = False
-                            # Deep crimson highlights for contrast on ancient parchment
-                            opts.highlightDefaultRenderer = rdMolDraw2D.DrawColour(0.65, 0.15, 0.15)
-                            
-                            drawer.DrawMolecule(mol, highlightAtoms=highlight_atoms)
-                            drawer.FinishDrawing()
-                            svg = drawer.GetDrawingText()
-                            
-                            st.markdown(f'<div class="svg-container" style="text-align: center;">{svg}</div>', unsafe_allow_html=True)
-                        except Exception as e:
-                            img = Draw.MolToImage(mol, highlightAtoms=highlight_atoms, size=(600, 450))
-                            st.image(img, use_container_width=True)
+    with tab3:
+        st.markdown("### Interactive 3D Model")
+        model_style = st.selectbox("Orbital Representation", ["Stick", "Sphere", "Line", "Cross"], index=0)
+        mol_h = Chem.AddHs(Chem.MolFromSmiles(res['smiles']))
+        AllChem.EmbedMolecule(mol_h, AllChem.ETKDGv3())
+        AllChem.MMFFOptimizeMolecule(mol_h)
+        mb = Chem.MolToMolBlock(mol_h)
+        view = py3Dmol.view(width=700, height=500)
+        view.addModel(mb, 'sdf')
+        styles = {"Stick": {'stick': {}}, "Sphere": {'sphere': {}}, "Line": {'line': {}}, "Cross": {'cross': {}}}
+        view.setStyle(styles.get(model_style))
+        view.setBackgroundColor('#2a231c')
+        view.zoomTo()
+        showmol(view, height=500, width=700)
 
-                    with tab3:
-                        try:
-                            st.markdown("### Interactive 3D Model")
-                            style_choice = st.selectbox("Orbital Representation Style", ["Stick", "Sphere", "Line", "Cross"])
-                            
-                            params = AllChem.ETKDGv3()
-                            params.randomSeed = 42
-                            res = AllChem.EmbedMolecule(mol_with_h, params)
-                            if res == -1:
-                                st.warning("3D coordinate synthesis unresolvable for this spatial complex.")
-                            else:
-                                AllChem.MMFFOptimizeMolecule(mol_with_h)
-                                mb = Chem.MolToMolBlock(mol_with_h)
-                                
-                                view = py3Dmol.view(width=700, height=500)
-                                view.addModel(mb, 'sdf')
-                                
-                                # Set style based on user choice
-                                style_dict = {
-                                    "Stick": {'stick': {}},
-                                    "Sphere": {'sphere': {}},
-                                    "Line": {'line': {}},
-                                    "Cross": {'cross': {}}
-                                }
-                                view.setStyle(style_dict.get(style_choice, {'stick': {}}))
-                                
-                                view.setBackgroundColor('#2a231c')
-                                view.zoomTo()
-                                
-                                showmol(view, height=500, width=700)
-                                st.caption("Instruct: Scroll to magnify; Select and drag to alter structural rotation.")
-                        except Exception as e:
-                            st.error(f"Visual projection failure: {e}")
+    # Download Report
+    report = f"REPORT: {res['name']}\nSMILES: {res['smiles']}\nFormula: {res['formula']}\nChiral Centers: {res['num_chiral']}"
+    st.download_button("📜 Download Analytical Report", report, f"{res['name']}_analysis.txt", use_container_width=True)
 
-                # --- 7. DOWNLOAD OPTION ---
-                st.markdown("---")
-                analysis_text = f"""
-ACADEMIC REPORT: STEREOCHEMICAL ANALYSIS
-========================================
-Compound: {compound_name}
-SMILES: {smiles_string}
-Formula: {formula}
-Exact Mass: {exact_mass:.4f} Da
-
-CHIRAL ANALYSIS:
-- Total Chiral Centers: {num_chiral}
-- R Configurations: {R_count}
-- S Configurations: {S_count}
-- Achiral (sp3) Carbons: {achiral_sp3}
-
-PHARMACOLOGICAL DESCRIPTORS:
-- MolWt: {mol_wt:.2f}
-- LogP: {logp:.2f}
-- TPSA: {tpsa:.2f}
-- H-Bond Donors: {hbd}
-- H-Bond Acceptors: {hba}
-- Lipinski Violations: {lipinski_violations}
-"""
-                st.download_button(
-                    label="📜 Download Analytical Report",
-                    data=analysis_text,
-                    file_name=f"{compound_name.replace(' ', '_')}_analysis.txt",
-                    mime="text/plain",
-                    use_container_width=True
-                )
